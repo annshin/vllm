@@ -387,20 +387,28 @@ class LLM:
         tokenizer = self.get_tokenizer()
         model_config = self.llm_engine.get_model_config()
 
-        conversations, _ = parse_chat_messages(messages, model_config,
-                                               tokenizer)
+        # TODO@: should parse to get proper conversations with > 1 turn!
+        # conversations, _ = parse_chat_messages(messages, model_config,
+        #                                        tokenizer)
 
+        # Temporary hack for testing (limited to single-turn conversation)
+        if len(messages) == 1:
+            conversations = [messages]
+        elif len(messages) > 1:
+            conversations = [[msg] for msg in messages]
+        else:
+            raise ValueError(f"Invalid messages: {messages}")
+        
         prompt = apply_chat_template(
             tokenizer,
             conversations,
             chat_template=chat_template,
             add_generation_prompt=add_generation_prompt)
+        # TODO@: (no) need of padding?
 
-        inputs: PromptInputs
-        if isinstance(prompt, list) and isinstance(prompt[0], int):
-            inputs = TokensPrompt(prompt_token_ids=prompt)
-        else:
-            inputs = TextPrompt(prompt=prompt)
+        # prompt: [id] -> inputs: {'prompt_token_ids': [id]}
+        inputs: Union[PromptInputs, Sequence[PromptInputs]]
+        inputs = [self.convert_to_prompt_inputs(p) for p in prompt]
 
         return self.generate(
             inputs,
@@ -408,7 +416,17 @@ class LLM:
             use_tqdm=use_tqdm,
             lora_request=lora_request,
         )
-
+    
+    @staticmethod
+    def convert_to_prompt_inputs(prompt):
+        """
+        Currently used in chat()
+        """
+        if isinstance(prompt, list) and isinstance(prompt[0], int):
+            return TokensPrompt(prompt_token_ids=prompt)
+        else:
+            return TextPrompt(prompt=prompt)
+            
     @overload  # LEGACY: single (prompt + optional token ids)
     def encode(
         self,

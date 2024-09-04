@@ -139,6 +139,22 @@ class MistralTokenizer:
         # encode-decode to get clean prompt
         return encoded.tokens
 
+    def apply_chat_template_batch(self,
+                            conversation: Union[List["ConversationMessage"], List[List["ConversationMessage"]]],
+                            tools: Optional[Dict[str, Any]] = None,
+                            **kwargs) -> List[int]:
+        assert tools is None, "`tools` are not yet supported."
+
+        if isinstance(conversation, list) and isinstance(conversation[0], list):
+            requests = [ChatCompletionRequest(messages=conv) for conv in conversation]
+        elif isinstance(conversation, list): # single conversation
+            requests = [ChatCompletionRequest(messages=conversation)]
+
+        encoded = self.mistral.encode_chat_completion(requests) # List[Tokenized], with Tokenizer[tokens, text, prefix_ids]
+        encoded_tokens = [e.tokens for e in encoded]
+        
+        return encoded_tokens
+
     def convert_tokens_to_string(self, tokens: List[str]) -> str:
         if self._is_tekken:
             return "".join(tokens)

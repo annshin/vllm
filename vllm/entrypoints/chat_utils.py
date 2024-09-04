@@ -289,7 +289,7 @@ def _parse_chat_message_content(
 
 
 def parse_chat_messages(
-    messages: List[ChatCompletionMessageParam],
+    messages: Union[List[ChatCompletionMessageParam], List[List[ChatCompletionMessageParam]]],
     model_config: ModelConfig,
     tokenizer: AnyTokenizer,
 ) -> Tuple[List[ConversationMessage], Optional[Awaitable[MultiModalDataDict]]]:
@@ -306,7 +306,7 @@ def parse_chat_messages(
 
 def apply_chat_template(
     tokenizer: AnyTokenizer,
-    conversation: List[ConversationMessage],
+    conversation: Union[List[ConversationMessage], List[List[ConversationMessage]]],
     chat_template: Optional[str],
     *,
     tokenize: bool = False,  # Different from HF's default
@@ -317,11 +317,13 @@ def apply_chat_template(
             "As of transformers v4.44, default chat template is no longer "
             "allowed, so you must provide a chat template if the tokenizer "
             "does not define one.")
-
-    prompt = tokenizer.apply_chat_template(
+    
+    # Attention: only for Mistral for now
+    prompt = tokenizer.apply_chat_template_batch(
         conversation=conversation,
         chat_template=chat_template,
         tokenize=tokenize,
         **kwargs,
     )
+
     return prompt
